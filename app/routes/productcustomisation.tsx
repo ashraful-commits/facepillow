@@ -93,6 +93,10 @@ export default function Productcustomisation() {
     setCropedImage(imageArray[index]);
   };
 
+  useEffect(()=>{
+    const storedImage = localStorage.getItem("finalImage");
+    setImages(storedImage ? JSON.parse(storedImage) : []);
+  },[step])
   const skinTones = [
     {
       id: 1,
@@ -191,11 +195,11 @@ export default function Productcustomisation() {
   useEffect(() => {
     setTimeout(() => {
       setLoading(false);
-    }, 1500); // Simulate loading time
+    }, 1500); 
   }, []);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const navigate = useNavigate(); // for redirecting to other routes
+  const navigate = useNavigate(); 
 
   const handleConfirmExit = (confirm: boolean) => {
     if (confirm) {

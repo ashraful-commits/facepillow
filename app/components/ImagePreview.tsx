@@ -41,9 +41,9 @@ function ImagePreview({ croppedImage, setStep, setCropedImage }) {
 
       const dataUrl = canvas.toDataURL();
       setCropedImage(dataUrl);
+      setStep(4);
       const finalImages = localStorage.getItem("finalImage");
       finalImages ? localStorage.setItem("finalImage", JSON.stringify([...JSON.parse(finalImages), dataUrl])) : localStorage.setItem("finalImage", JSON.stringify([dataUrl]));
-      setStep(4);
     };
 
     img.onerror = () => {
