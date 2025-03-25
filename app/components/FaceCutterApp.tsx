@@ -2,9 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
 import { removeBackground } from "@imgly/background-removal";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
-import { FaBrush, FaUndo, FaRedo, FaCheck } from "react-icons/fa"; // Added for brush, undo, and redo icons
+import { FaBrush, FaCheck } from "react-icons/fa"; // Added for brush, undo, and redo icons
 import { IoArrowBackOutline } from "react-icons/io5"; // Added for the back button
-
 const FaceCutterApp = ({ faceImage, setStep, setCropedImage }) => {
   const [removeBG, setRemoveBG] = useState(null);
   const [isErasing, setIsErasing] = useState(false);
@@ -14,7 +13,15 @@ const FaceCutterApp = ({ faceImage, setStep, setCropedImage }) => {
   const imageRef = useRef(null);
   const [removeLoader, setRemoveLoader] = useState(false);
   const [saveLoader, setSaveLoader] = useState(false);
-
+  const base64ToBlob = (base64String) => {
+    const byteCharacters = atob(base64String.split(',')[1]); // Remove header
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: "image/png" });
+  };
   const createCanvas = () => {
     if (!canvasInstance.current) {
       canvasInstance.current = new fabric.Canvas(canvasRef.current, {
@@ -33,6 +40,7 @@ const FaceCutterApp = ({ faceImage, setStep, setCropedImage }) => {
   };
 
   useEffect(() => {
+    console.log(removeBG)
     const loadImage = () => {
       if (removeBG instanceof Blob || removeBG instanceof File) {
         const reader = new FileReader();
@@ -71,7 +79,7 @@ const FaceCutterApp = ({ faceImage, setStep, setCropedImage }) => {
 
     loadImage();
   }, [removeBG]);
-
+ 
   const toggleErase = () => {
     setIsErasing((prev) => !prev);
     if (canvasInstance.current) {
@@ -96,45 +104,95 @@ const FaceCutterApp = ({ faceImage, setStep, setCropedImage }) => {
     }
   };
 
-  const saveErasedImage = () => {
-    if (canvasInstance.current) {
-      setIsErasing((prev) => !prev);
-      setSaveLoader(true);
-      const editedImage = canvasInstance.current.toDataURL({
-        format: "png",
-        quality: 1,
+  const saveErasedImage = async () => {
+    if (!canvasInstance.current) return;
+  
+    setIsErasing((prev) => !prev);
+    setSaveLoader(true);
+  
+    try {
+      // Convert the edited canvas image to base64
+      const editedImage = canvasInstance.current.toDataURL("image/png");
+  
+      if (!editedImage) throw new Error("Failed to convert canvas to image");
+  
+      // Convert base64 to Blob
+      const imageBlob = base64ToBlob(editedImage);
+      const formData = new FormData();
+      formData.append("image", imageBlob, "faceImage.png");
+  
+      // Send image to API
+      const response = await fetch("/api/image", {
+        method: "POST",
+        body: formData,
       });
-      if (editedImage) {
-        removeBackground(editedImage)
-          .then((blob) => {
-            const url = URL.createObjectURL(blob);
-            setCropedImage(url);
-            setStep(3);
-            setSaveLoader(false);
-          })
-          .catch((error) => {
-            setSaveLoader(false);
-            console.error("Error during background removal:", error);
-          });
-      }
+  
+      if (!response.ok) throw new Error("API Error");
+  
+      // Convert response to Blob and create object URL
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+  
+      // Update state with processed image
+      setCropedImage(url);
+      setStep(3);
+    } catch (error) {
+      console.error("Image saving failed:", error);
+    } finally {
+      setSaveLoader(false); // Ensure loader is stopped regardless of success/failure
     }
   };
+  
+  // const handleRemoveBg = () => {
+  //   setRemoveLoader(true);
+  //   removeBackground(faceImage)
+  //     .then((blob) => {
+  //       console.log(blob)
+  //       const url = URL.createObjectURL(blob);
+  //       setRemoveBG(url);
+  //       console.log(url)
+  //       setCropedImage(url);
+  //       setRemoveLoader(false);
+  //       createCanvas();
+  //     })
+  //     .catch((error) => {
+  //       setRemoveLoader(false);
+  //       console.error("Error during background removal:", error);
+  //     });
+  // };
 
-  const handleRemoveBg = () => {
-    setRemoveLoader(true);
-    removeBackground(faceImage)
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        setRemoveBG(url);
+  const handleRemoveBg = async () => {
+    try {
+      setRemoveLoader(true);
+      
+      if (!faceImage.startsWith("data:image")) {
+        throw new Error("Invalid image format");
+      }
+  
+      const imageBlob = base64ToBlob(faceImage);
+      const formData = new FormData();
+      formData.append("image", imageBlob, "faceImage.png");
+  
+      const response = await fetch("/api/image", {
+        method: "POST",
+        body: formData,
+      });
+  
+      if (!response.ok) throw new Error("API Error");
+  
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setRemoveBG(url);
         setCropedImage(url);
         setRemoveLoader(false);
         createCanvas();
-      })
-      .catch((error) => {
-        setRemoveLoader(false);
-        console.error("Error during background removal:", error);
-      });
+    } catch (error) {
+      console.error("Background removal failed:", error);
+    } finally {
+      setRemoveLoader(false);
+    }
   };
+  
 
   const handleBack = () => {
     setStep(1);

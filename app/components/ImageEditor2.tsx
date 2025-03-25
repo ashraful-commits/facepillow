@@ -8,13 +8,13 @@ import {
   FaMinus,
   FaSync,
 } from "react-icons/fa";
+
 const ImageEditor = ({
   faceImage,
   bodyImage,
   skinTone,
   SkitToneImage,
   headBackImage,
-  backgroundImg,
   setStep,
   step,
 }) => {
@@ -23,8 +23,10 @@ const ImageEditor = ({
   const canvasHeadBackRef = useRef(null);
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
-
-  const defaultBodyImage = bodyImage || "/images/SN-044_copy_2_preview.png";
+  const defaultBodyImage =
+    bodyImage ||
+    "/images/SN-044_copy_2_preview.png";
+  
   const defaultSkitToneImage =
     SkitToneImage || "/images/Snugzy_Shape_preview.png";
   const defaultHeadBackImage = headBackImage || "/images/headblack_preview.png";
@@ -36,7 +38,7 @@ const ImageEditor = ({
 
   // Transformations
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
-  const [scale, setScale] = useState(.7);
+  const [scale, setScale] = useState(0.7);
   const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -156,29 +158,38 @@ const ImageEditor = ({
         break;
     }
   };
-
   const downloadCanvasAsImage = async (event) => {
     if (!containerRef.current) return;
-
+  
     try {
+      // Generate the image from the canvas
       const canvasImage = await html2canvas(containerRef.current, {
         useCORS: true,
-        allowTaint: false,
+        allowTaint: true,
+        logging: true,
       });
-
+  
+      // Create a link element to download the image
       const link = document.createElement("a");
       link.href = canvasImage.toDataURL("image/png");
       link.download = "facepillow.png";
+  
+      // Append the link, trigger the click, then remove the link
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+  
+      // Store the image URL in localStorage (optional)
+      localStorage.setItem("finalLink", link.href);
+  
 
-      setStep(0); // Reset the step after download
+      // Reset the step after download
+      setStep(0);
     } catch (error) {
       console.error("Error generating image:", error);
     }
   };
-
+  
   return (
     <div className="flex flex-col border-r border-r-gray-500 items-center justify-center w-[50%] max-sm:w-full z-0 min-h-[90vh]">
       <div
@@ -226,6 +237,7 @@ const ImageEditor = ({
             ref={canvasBodyRef}
             width={width}
             height={height}
+            crossOrigin="anonymous"
           ></canvas>
         </div>
       </div>
@@ -240,50 +252,52 @@ const ImageEditor = ({
         </div>
       )}
 
-     {step===7 && <div className="controls mt-20">
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleRotate(1)}
-            className="bg-blue-600 text-white px-2 py-1 text-sm rounded-md hover:bg-blue-700 flex items-center gap-2"
-          >
-            <FaSync className="inline-block text-sm font-light" />
-          </button>
-          <button
-            onClick={() => handleRotate(-1)}
-            className="bg-blue-600 text-white px-2 py-1 text-sm rounded-md hover:bg-blue-700 flex items-center gap-2"
-          >
-            <FaSync className="inline-block transform rotate-180" />
-          </button>
-       
-          <button
-            onClick={() => handleMove("up")}
-            className="bg-gray-600 text-white px-2 py-1 text-sm rounded-md hover:bg-gray-700 flex items-center gap-2"
-          >
-            <FaArrowAltCircleUp className="inline-block text-sm font-light" />
-          </button>
-          <button
-            onClick={() => handleMove("down")}
-            className="bg-gray-600 text-white px-2 py-1 text-sm rounded-md hover:bg-gray-700 flex items-center gap-2"
-          >
-            <FaArrowAltCircleDown className="inline-block text-sm font-light" />
-          </button>
+      {step === 7 && (
+        <div className="controls mt-20">
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleRotate(1)}
+              className="bg-blue-600 text-white px-2 py-1 text-sm rounded-md hover:bg-blue-700 flex items-center gap-2"
+            >
+              <FaSync className="inline-block text-sm font-light" />
+            </button>
+            <button
+              onClick={() => handleRotate(-1)}
+              className="bg-blue-600 text-white px-2 py-1 text-sm rounded-md hover:bg-blue-700 flex items-center gap-2"
+            >
+              <FaSync className="inline-block transform rotate-180" />
+            </button>
 
-          <button
-            onClick={() => setScale((prevScale) => prevScale + 0.01)}
-            className="bg-gray-600 text-white px-2 py-1 text-sm rounded-md hover:bg-gray-700 flex items-center gap-2"
-          >
-            <FaPlus className="inline-block text-sm font-light" />
-          </button>
-          <button
-            onClick={() =>
-              setScale((prevScale) => Math.max(prevScale - 0.01, 0.01))
-            }
-            className="bg-gray-600 text-white px-2 py-1 text-sm rounded-md hover:bg-gray-700 flex items-center gap-2"
-          >
-            <FaMinus className="inline-block text-sm font-light" />
-          </button>
+            <button
+              onClick={() => handleMove("up")}
+              className="bg-gray-600 text-white px-2 py-1 text-sm rounded-md hover:bg-gray-700 flex items-center gap-2"
+            >
+              <FaArrowAltCircleUp className="inline-block text-sm font-light" />
+            </button>
+            <button
+              onClick={() => handleMove("down")}
+              className="bg-gray-600 text-white px-2 py-1 text-sm rounded-md hover:bg-gray-700 flex items-center gap-2"
+            >
+              <FaArrowAltCircleDown className="inline-block text-sm font-light" />
+            </button>
+
+            <button
+              onClick={() => setScale((prevScale) => prevScale + 0.01)}
+              className="bg-gray-600 text-white px-2 py-1 text-sm rounded-md hover:bg-gray-700 flex items-center gap-2"
+            >
+              <FaPlus className="inline-block text-sm font-light" />
+            </button>
+            <button
+              onClick={() =>
+                setScale((prevScale) => Math.max(prevScale - 0.01, 0.01))
+              }
+              className="bg-gray-600 text-white px-2 py-1 text-sm rounded-md hover:bg-gray-700 flex items-center gap-2"
+            >
+              <FaMinus className="inline-block text-sm font-light" />
+            </button>
+          </div>
         </div>
-      </div>}
+      )}
     </div>
   );
 };

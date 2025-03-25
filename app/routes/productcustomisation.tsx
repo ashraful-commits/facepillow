@@ -10,8 +10,32 @@ import ImagePreview from "~/components/ImagePreview";
 import { AiOutlineArrowLeft } from "react-icons/ai";
 import CameraComponent from "~/components/Camera";
 import FinalPreview from "~/components/FinalPreview";
-import { useNavigate } from "@remix-run/react";
+import {  useLoaderData, useNavigate } from "@remix-run/react";
+export const loader = async () => {
+  const imageUrl = "https://snugzy-production.s3.amazonaws.com/image/image/b1c30c74-3de2-4735-86e9-1684811d4791/SN-549_preview.png";
 
+  try {
+    const response = await fetch(imageUrl);
+    console.log("res",response)
+    if (!response.ok) {
+      throw new Response("Failed to fetch image", { status: response.status });
+    }
+
+    const imageBuffer = await response.arrayBuffer();
+    console.log("imageBuffer",imageBuffer)
+    const base64Image = Buffer.from(imageBuffer).toString("base64");
+    const dataUrl = `data:${response.headers.get("Content-Type") || "image/jpeg"};base64,${base64Image}`;
+
+    return new Response(JSON.stringify({ imageUrl: dataUrl }), {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching image:", error);
+    throw new Response("Internal Server Error", { status: 500 });
+  }
+};
 export const meta: MetaFunction = () => {
   return [
     { title: "Product Customization" },
@@ -21,7 +45,7 @@ export const meta: MetaFunction = () => {
 
 export default function Productcustomisation() {
   const [images, setImages] = useState<string[]>([]);
-
+  const {imageUrl} = useLoaderData()
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedImages = localStorage.getItem("finalImage");
@@ -274,13 +298,13 @@ export default function Productcustomisation() {
               Exit
             </button>
           </div>
-
+         
           {/* Main Section */}
           <div className="flex gap-2 max-sm:flex-col justify-center items-center min-h-[80vh]">
             {/* Left Section - Image Preview */}
             <ImageEditor2
               faceImage={croppedImage}
-              bodyImage={bodyImage}
+              bodyImage={imageUrl}
               skinTone={skinTone}
               step={step}
               setStep={setStep}
